@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
-function SettingsModal({ onClose }) {
+function SettingsModal({ onClose, initialTab = 'email' }) {
   const [settings, setSettings] = useState({
     imap_server: '',
     imap_port: '993',
@@ -19,7 +19,7 @@ function SettingsModal({ onClose }) {
   const [testingImap, setTestingImap] = useState(false);
   const [testingTelegram, setTestingTelegram] = useState(false);
   const [message, setMessage] = useState(null);
-  const [activeTab, setActiveTab] = useState('email');
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   // Trigger words state
   const [triggerWords, setTriggerWords] = useState({});
@@ -32,6 +32,12 @@ function SettingsModal({ onClose }) {
   // Email logs state
   const [emailLogs, setEmailLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
+
+  // Templates state
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplateSteps, setNewTemplateSteps] = useState('');
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -72,6 +78,60 @@ function SettingsModal({ onClose }) {
       fetchEmailLogs();
     }
   }, [activeTab]);
+
+  // Fetch templates when tab becomes active
+  useEffect(() => {
+    if (activeTab === 'templates') {
+      fetchTemplates();
+    }
+  }, [activeTab]);
+
+  const fetchTemplates = async () => {
+    setTemplatesLoading(true);
+    try {
+      const data = await api.getTemplates();
+      setTemplates(data);
+    } catch (err) {
+      console.error('Failed to fetch templates:', err);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  const handleCreateTemplate = async () => {
+    if (!newTemplateName.trim()) return;
+
+    const steps = newTemplateSteps
+      .split('\n')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
+    if (steps.length === 0) {
+      setMessage({ type: 'error', text: 'Please add at least one step' });
+      return;
+    }
+
+    try {
+      await api.createTemplate({ name: newTemplateName, steps });
+      setNewTemplateName('');
+      setNewTemplateSteps('');
+      fetchTemplates();
+      setMessage({ type: 'success', text: 'Template created!' });
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Failed to create template' });
+    }
+  };
+
+  const handleDeleteTemplate = async (id) => {
+    if (!window.confirm('Delete this template?')) return;
+    try {
+      await api.deleteTemplate(id);
+      fetchTemplates();
+      setMessage({ type: 'success', text: 'Template deleted' });
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Failed to delete template' });
+    }
+  };
 
   const fetchEmailLogs = async () => {
     setLogsLoading(true);
@@ -222,6 +282,7 @@ function SettingsModal({ onClose }) {
     { key: 'email', label: 'Email' },
     { key: 'triggers', label: 'Triggers' },
     { key: 'logs', label: 'Email Log' },
+    { key: 'templates', label: 'Templates' },
     { key: 'telegram', label: 'Telegram' },
     { key: 'general', label: 'General' },
   ];
@@ -794,6 +855,124 @@ function SettingsModal({ onClose }) {
                   ))}
                 </div>
               )}
+            </>
+          )}
+
+          {activeTab === 'templates' && (
+            <>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '20px', fontSize: '0.9375rem', lineHeight: 1.6 }}>
+                Workflow templates let you quickly add a set of predefined subtasks to any task.
+              </p>
+
+              {/* Existing Templates */}
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '12px', color: 'var(--text-primary)' }}>
+                  Your Templates
+                </h3>
+
+                {templatesLoading ? (
+                  <div className="loading">
+                    <div className="spinner" />
+                  </div>
+                ) : templates.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '40px 20px',
+                    color: 'var(--text-muted)',
+                    background: 'var(--bg-tertiary)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)'
+                  }}>
+                    No templates yet. Create one below.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {templates.map(template => (
+                      <div
+                        key={template.id}
+                        style={{
+                          background: 'var(--bg-tertiary)',
+                          padding: '16px',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid var(--border-color)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '0.9375rem' }}>{template.name}</div>
+                            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                              {template.steps.length} steps
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteTemplate(template.id)}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: 'var(--radius-sm)',
+                              border: '1px solid var(--status-overdue)',
+                              background: 'transparent',
+                              color: 'var(--status-overdue)',
+                              cursor: 'pointer',
+                              fontSize: '0.8125rem'
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                        <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                          {template.steps.map((step, i) => (
+                            <div key={i} style={{ padding: '4px 0', borderBottom: i < template.steps.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
+                              {i + 1}. {step}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Create New Template */}
+              <div style={{
+                background: 'var(--bg-tertiary)',
+                padding: '16px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)'
+              }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '12px', color: 'var(--text-primary)' }}>
+                  Create New Template
+                </h3>
+
+                <div className="form-group">
+                  <label className="form-label">Template Name</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={newTemplateName}
+                    onChange={(e) => setNewTemplateName(e.target.value)}
+                    placeholder="e.g., Standard Project Workflow"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Steps (one per line)</label>
+                  <textarea
+                    className="form-textarea"
+                    value={newTemplateSteps}
+                    onChange={(e) => setNewTemplateSteps(e.target.value)}
+                    placeholder="Review requirements&#10;Create design&#10;Get approval&#10;Implement changes&#10;Test and verify"
+                    rows={6}
+                  />
+                </div>
+
+                <button
+                  className="btn btn-primary"
+                  onClick={handleCreateTemplate}
+                  style={{ width: '100%' }}
+                >
+                  Create Template
+                </button>
+              </div>
             </>
           )}
         </div>

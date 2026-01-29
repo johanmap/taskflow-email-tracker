@@ -9,9 +9,11 @@ import SettingsModal from './components/SettingsModal';
 import { useTasks, useStats, useTemplates } from './hooks/useTasks';
 
 function App() {
+  const [currentPage, setCurrentPage] = useState('dashboard');
   const [view, setView] = useState('board');
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsTab, setSettingsTab] = useState('email');
   const [selectedTask, setSelectedTask] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectionMode, setSelectionMode] = useState(false);
@@ -161,9 +163,32 @@ function App() {
     setSelectedTaskIds(new Set());
   };
 
+  const handleNavigate = (page) => {
+    setCurrentPage(page);
+    // Reset selection mode when navigating
+    setSelectionMode(false);
+    setSelectedTaskIds(new Set());
+
+    // Handle special pages that open modals
+    if (page === 'inbox') {
+      setSettingsTab('logs');
+      setShowSettings(true);
+    } else if (page === 'templates') {
+      setSettingsTab('templates');
+      setShowSettings(true);
+    }
+  };
+
   return (
     <div className="app-container">
-      <Sidebar onSettingsClick={() => setShowSettings(true)} />
+      <Sidebar
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        onSettingsClick={() => {
+          setSettingsTab('email');
+          setShowSettings(true);
+        }}
+      />
 
       <div className="main-content">
         <Header
@@ -184,7 +209,18 @@ function App() {
         />
 
         <div className="content-area">
-          <StatsPanel stats={stats} />
+          {/* Show stats panel on dashboard only */}
+          {currentPage === 'dashboard' && <StatsPanel stats={stats} />}
+
+          {/* Page title for non-dashboard pages */}
+          {currentPage === 'tasks' && (
+            <div style={{ marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>All Tasks</h2>
+              <p style={{ margin: '8px 0 0', color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+                {filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''} total
+              </p>
+            </div>
+          )}
 
           {loading ? (
             <div className="loading">
@@ -232,7 +268,16 @@ function App() {
       )}
 
       {showSettings && (
-        <SettingsModal onClose={() => setShowSettings(false)} />
+        <SettingsModal
+          initialTab={settingsTab}
+          onClose={() => {
+            setShowSettings(false);
+            // Reset to dashboard if we were viewing inbox/templates
+            if (currentPage === 'inbox' || currentPage === 'templates') {
+              setCurrentPage('dashboard');
+            }
+          }}
+        />
       )}
     </div>
   );

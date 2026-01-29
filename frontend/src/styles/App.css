@@ -99,6 +99,12 @@ body {
   font-weight: 500;
   font-size: 0.9375rem;
   margin-bottom: var(--space-1);
+  /* Button reset for nav buttons */
+  width: 100%;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
 }
 
 .nav-item svg {
