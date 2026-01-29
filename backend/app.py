@@ -48,6 +48,10 @@ def init_db():
             logger.info("Created default subtask template")
 
 
+# Initialize database on startup (works with gunicorn)
+init_db()
+
+
 # ============== TASK ENDPOINTS ==============
 
 @app.route('/api/tasks', methods=['GET'])
