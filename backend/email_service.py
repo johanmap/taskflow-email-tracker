@@ -340,12 +340,16 @@ class EmailService:
                     priority = self.determine_priority(subject, body)
 
                     # Check for existing task with same thread (normalized subject)
+                    # Match any task with the same base subject, regardless of sender
                     normalized_subj = normalize_subject(subject)
-                    existing_task = Task.query.filter(
-                        db.func.lower(Task.title).like(f'%{normalized_subj.lower()}%') if normalized_subj else False
-                    ).filter(
-                        Task.customer_email == customer_info['email']
-                    ).first()
+                    existing_task = None
+                    if normalized_subj and len(normalized_subj) > 5:  # Only check if subject is meaningful
+                        # Look for tasks where the normalized title matches
+                        all_tasks = Task.query.all()
+                        for t in all_tasks:
+                            if normalize_subject(t.title).lower() == normalized_subj.lower():
+                                existing_task = t
+                                break
 
                     if existing_task:
                         emails_skipped_duplicate += 1
