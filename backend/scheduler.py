@@ -16,7 +16,8 @@ def scan_emails_job(app):
 
     with app.app_context():
         logger.info("Running scheduled email scan...")
-        result = email_service.scan_inbox()
+        # Scan past 1 day regardless of read status
+        result = email_service.scan_inbox(days=1)
 
         if result['tasks_created'] > 0:
             logger.info(f"Created {result['tasks_created']} new tasks from emails")
