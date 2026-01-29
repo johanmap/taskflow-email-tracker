@@ -34,7 +34,15 @@ function App() {
   });
 
   const handleCreateTask = async (data) => {
-    await createTask(data);
+    // Extract templateId if present
+    const { templateId, ...taskData } = data;
+    const newTask = await createTask(taskData);
+
+    // Apply template if one was selected
+    if (templateId && newTask && newTask.id) {
+      await applyTemplate(newTask.id, parseInt(templateId));
+    }
+
     refreshStats();
     setShowTaskModal(false);
   };
@@ -206,6 +214,7 @@ function App() {
 
       {showTaskModal && (
         <TaskModal
+          templates={templates}
           onClose={() => setShowTaskModal(false)}
           onSave={handleCreateTask}
         />

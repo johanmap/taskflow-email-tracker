@@ -36,6 +36,7 @@ function TaskModal({ task, templates, onClose, onSave, onDelete, onApplyTemplate
   const [subtasks, setSubtasks] = useState([]);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
   useEffect(() => {
     if (task) {
@@ -67,7 +68,9 @@ function TaskModal({ task, templates, onClose, onSave, onDelete, onApplyTemplate
     setSaving(true);
 
     try {
-      await onSave(formData);
+      // Include template ID for new tasks
+      const dataToSave = isEditing ? formData : { ...formData, templateId: selectedTemplateId || null };
+      await onSave(dataToSave);
     } catch (err) {
       console.error('Failed to save task:', err);
     } finally {
@@ -310,6 +313,28 @@ function TaskModal({ task, templates, onClose, onSave, onDelete, onApplyTemplate
                     </select>
                   </div>
                 </div>
+
+                {/* Template selector for new tasks */}
+                {!isEditing && templates && templates.length > 0 && (
+                  <div className="form-group">
+                    <label className="form-label">Workflow Template (Optional)</label>
+                    <select
+                      className="form-select"
+                      value={selectedTemplateId}
+                      onChange={(e) => setSelectedTemplateId(e.target.value)}
+                    >
+                      <option value="">No template - create empty task</option>
+                      {templates.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} ({t.steps.length} steps)
+                        </option>
+                      ))}
+                    </select>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+                      Select a template to automatically add subtasks when creating this task.
+                    </p>
+                  </div>
+                )}
               </>
             )}
 
