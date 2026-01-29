@@ -51,6 +51,9 @@ def init_db():
 # Initialize database on startup (works with gunicorn)
 init_db()
 
+# Initialize scheduler for automatic email scanning (works with gunicorn)
+init_scheduler(app)
+
 
 # ============== TASK ENDPOINTS ==============
 
