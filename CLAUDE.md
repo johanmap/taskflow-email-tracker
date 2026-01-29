@@ -252,6 +252,8 @@ The Telegram bot sends ONE-WAY notifications (does not respond to messages).
 - ✅ Stats dashboard
 - ✅ Functional sidebar navigation
 - ✅ IMAP email scanning (unread, 7 days, 30 days, all)
+- ✅ Auto-scan every 5 minutes (past 1 day, regardless of read status)
+- ✅ Email thread detection (Re:/Fwd: replies grouped, one task per thread)
 - ✅ Email date used for due date calculation
 - ✅ Telegram notifications
 - ✅ Visual feedback on email scan (toast notification)
@@ -298,6 +300,8 @@ The Telegram bot sends ONE-WAY notifications (does not respond to messages).
 - **URL**: http://143.198.32.152
 - **Server**: DigitalOcean Droplet (Ubuntu 22.04, 2GB RAM)
 - **Location**: `/opt/taskflow/`
+- **Timezone**: America/Toronto (EST)
+- **Database**: SQLite at `/opt/taskflow/backend/taskflow.db` (persisted via Docker volume)
 
 ### Deploy Updates
 After pushing changes to GitHub, SSH into the VPS and run:
