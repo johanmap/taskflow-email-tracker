@@ -8,6 +8,7 @@ services:
     ports:
       - "5000:5000"
     environment:
+      - TZ=America/Toronto
       - FLASK_ENV=production
       - SECRET_KEY=${SECRET_KEY:-your-secret-key}
       - IMAP_SERVER=${IMAP_SERVER}
@@ -26,6 +27,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
+    environment:
+      - TZ=America/Toronto
     depends_on:
       - backend
     restart: unless-stopped
