@@ -2,8 +2,7 @@ import os
 import json
 import logging
 from datetime import datetime, date
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask import Flask, request, jsonify, send_from_directory
 
 from models import db, Task, Subtask, SubtaskTemplate, Setting, ProcessedEmail, EmailScanLog
 from config import Config, DEFAULT_TEMPLATE
@@ -18,12 +17,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Create Flask app
-app = Flask(__name__)
-app.config.from_object(Config)
+# Path to React production build
+FRONTEND_BUILD = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend', 'build')
 
-# Enable CORS
-CORS(app, origins=['http://localhost:3000', 'http://127.0.0.1:3000'])
+# Create Flask app - serve static files from React build if it exists
+if os.path.exists(FRONTEND_BUILD):
+    app = Flask(__name__, static_folder=FRONTEND_BUILD, static_url_path='')
+else:
+    app = Flask(__name__)
+
+app.config.from_object(Config)
 
 # Initialize database
 db.init_app(app)
@@ -534,11 +537,31 @@ def health_check():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
 
 
+# ============== FRONTEND ROUTES ==============
+
+@app.route('/')
+def serve_frontend():
+    """Serve React app."""
+    if os.path.exists(FRONTEND_BUILD):
+        return send_from_directory(FRONTEND_BUILD, 'index.html')
+    return jsonify({'message': 'Frontend not built. Run: cd frontend && npm run build'})
+
+
+@app.errorhandler(404)
+def not_found(e):
+    """Serve React app for client-side routing."""
+    if os.path.exists(FRONTEND_BUILD) and not request.path.startswith('/api/'):
+        return send_from_directory(FRONTEND_BUILD, 'index.html')
+    return jsonify({'error': 'Not found'}), 404
+
+
 # ============== MAIN ==============
 
 if __name__ == '__main__':
     init_db()
     init_scheduler(app)
 
+    # Use production mode for less RAM usage (set DEBUG=true env var to enable debug)
+    debug_mode = os.environ.get('DEBUG', 'false').lower() == 'true'
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)
