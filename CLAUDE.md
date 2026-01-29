@@ -291,3 +291,50 @@ The Telegram bot sends ONE-WAY notifications (does not respond to messages).
 2. Add state variables for the tab's data
 3. Add useEffect to fetch data when tab becomes active
 4. Add UI content with `{activeTab === 'tabname' && (...)}`
+
+## Deployment
+
+### Production Server
+- **URL**: http://143.198.32.152
+- **Server**: DigitalOcean Droplet (Ubuntu 22.04, 2GB RAM)
+- **Location**: `/opt/taskflow/`
+
+### Deploy Updates
+After pushing changes to GitHub, SSH into the VPS and run:
+```bash
+cd /opt/taskflow && git pull && docker compose up -d --build
+```
+
+### Initial Setup (already done)
+1. Install Docker: `curl -fsSL https://get.docker.com | sh`
+2. Clone repo: `git clone https://github.com/johanmap/taskflow-email-tracker.git /opt/taskflow`
+3. Create `.env` file in `/opt/taskflow/` with IMAP credentials
+4. Start: `cd /opt/taskflow && docker compose up -d --build`
+
+### Environment Variables (.env)
+```
+IMAP_SERVER=mail.map-inc.ca
+IMAP_PORT=993
+IMAP_EMAIL=johan@map-inc.ca
+IMAP_PASSWORD=<password>
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+SECRET_KEY=<random-string>
+SCAN_INTERVAL_MINUTES=5
+DEFAULT_DUE_DAYS=3
+```
+
+### Useful Commands (run on VPS)
+```bash
+# View logs
+docker compose logs -f
+
+# Restart containers
+docker compose restart
+
+# Stop containers
+docker compose down
+
+# Rebuild after code changes
+docker compose up -d --build
+```
