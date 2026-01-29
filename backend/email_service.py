@@ -35,6 +35,18 @@ def get_marketing_filters():
     return MARKETING_FILTERS
 
 
+def normalize_subject(subject):
+    """Strip Re:, Fwd:, etc. prefixes to get the base subject for thread grouping."""
+    if not subject:
+        return ''
+
+    # Pattern to match common reply/forward prefixes (case-insensitive)
+    # Handles: Re:, RE:, Fwd:, FW:, Fw:, and multiple prefixes like "Re: Re: Re:"
+    pattern = r'^(?:\s*(?:re|fwd?|fw)\s*:\s*)+'
+    normalized = re.sub(pattern, '', subject, flags=re.IGNORECASE).strip()
+    return normalized
+
+
 class EmailService:
     """Service for scanning emails and creating tasks."""
 
@@ -326,6 +338,30 @@ class EmailService:
                     customer_info = self.extract_customer_info(from_header, body)
                     ref_numbers = self.extract_reference_numbers(subject, body)
                     priority = self.determine_priority(subject, body)
+
+                    # Check for existing task with same thread (normalized subject)
+                    normalized_subj = normalize_subject(subject)
+                    existing_task = Task.query.filter(
+                        db.func.lower(Task.title).like(f'%{normalized_subj.lower()}%') if normalized_subj else False
+                    ).filter(
+                        Task.customer_email == customer_info['email']
+                    ).first()
+
+                    if existing_task:
+                        emails_skipped_duplicate += 1
+                        # Mark as processed but don't create new task
+                        processed = ProcessedEmail(message_id=message_id, folder='INBOX')
+                        db.session.add(processed)
+                        log = EmailScanLog(
+                            message_id=message_id,
+                            subject=subject[:500] if subject else '',
+                            from_address=from_email,
+                            result='skipped_thread',
+                            reason=f'Thread exists: Task #{existing_task.id}'
+                        )
+                        db.session.add(log)
+                        db.session.commit()
+                        continue
 
                     # Get email date and calculate due date based on it
                     due_days = int(Setting.get('default_due_days') or Config.DEFAULT_DUE_DAYS)
